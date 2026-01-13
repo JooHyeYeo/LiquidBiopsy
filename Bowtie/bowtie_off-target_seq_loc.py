@@ -4,7 +4,7 @@ import tempfile
 import os
 from collections import defaultdict
 import pandas as pd
-from pyfaidx import Fasta  # pysam 대신 pyfaidx 사용
+from pyfaidx import Fasta
 
 
 class Bowtie2OffTargetAnalyzer:
@@ -123,19 +123,22 @@ class Bowtie2OffTargetAnalyzer:
                         strand = '-' if flag & 16 else '+'
                         chrom = fields[2]
                         pos = int(fields[3])
-                        aligned_seq = fields[9]
                         pam_used = parts[2] if len(parts) >= 3 else pam
                         
+                        # Reference에서 35bp 추출 (4bp + 23bp + 8bp)
                         off_target_35bp = self._get_flanking_seq(chrom, pos, strand)
+                        
+                        # 35bp에서 중간 23bp 추출 (실제 reference 서열)
+                        aligned_seq = off_target_35bp[4:27] if len(off_target_35bp) >= 27 else off_target_35bp
                         
                         hit_details[guide_seq].append({
                             'chrom': chrom,
                             'pos': pos,
                             'strand': strand,
-                            'aligned_seq': aligned_seq,
-                            'aligned_guide': aligned_seq[:20],
-                            'aligned_pam': aligned_seq[20:],
-                            'Off_Target': off_target_35bp,
+                            'aligned_seq': aligned_seq,           # reference 23bp
+                            'aligned_guide': aligned_seq[:20],    # reference guide 20bp
+                            'aligned_pam': aligned_seq[20:],      # reference PAM 3bp
+                            'Off_Target': off_target_35bp,        # reference 35bp (flanking 포함)
                             'mismatch': nm,
                             'pam_used': pam_used
                         })
@@ -156,10 +159,10 @@ class Bowtie2OffTargetAnalyzer:
         return all_counts, all_details
     
     def close(self):
-        pass  # pyfaidx는 자동으로 닫힘
+        pass
 
 
-print("✅ 함수 정의 완료! (pyfaidx 사용)")
+print("✅ 함수 정의 완료! (aligned_seq 버그 수정)")
 
 # 출력 폴더 생성
 os.makedirs('/extdata3/YEO/LIB_DESIGN/20250109_EC_WGS/Target_Candi_Off', exist_ok=True)
